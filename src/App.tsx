@@ -64,6 +64,7 @@ export default function App() {
               destino={destino}
               setDestino={setDestino}
               setRutaResaltada={setRutaResaltada}
+              setToast={setToast}
             />
           ) : (
             <div style={{ padding: 40, color: 'var(--ink-3)' }}>
