@@ -1,5 +1,8 @@
-// Rutas Fase 1: solo pares (i,j). En Task 22 se reemplaza con Ruta[] enriquecido.
-export const rutasParesSeed: [number, number][] = [
+import type { Ruta } from '../lib/types';
+import { ciudadesSeed } from './cities';
+import { generarCostoYTiempo } from '../lib/pricing';
+
+const pares: [number, number][] = [
   // Perú internas
   [0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],
   [6,5],[6,7],[6,8],
@@ -16,3 +19,11 @@ export const rutasParesSeed: [number, number][] = [
   // Bogotá - Europa
   [30,55],[30,56],[30,57],
 ];
+
+export const rutasSeed: Ruta[] = pares.map(([from, to]) => {
+  const { costoBase, duracionMin } = generarCostoYTiempo(ciudadesSeed[from], ciudadesSeed[to]);
+  return { from, to, costoBase, duracionMin };
+});
+
+// Compat para Task 7 — se borra cuando state.ts ya use rutasSeed directamente.
+export const rutasParesSeed: [number, number][] = pares;
