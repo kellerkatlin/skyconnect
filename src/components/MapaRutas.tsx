@@ -210,6 +210,10 @@ export function MapaRutas({ estado, ciudadSel, setCiudadSel, rutaResaltada }: Pr
       {hover != null && (() => {
         const c = ciudades[hover];
         const grado = grados[hover];
+        const salidas = estado.rutas.filter(r => r.from === hover || r.to === hover);
+        const costoProm = salidas.length
+          ? Math.round(salidas.reduce((s, r) => s + r.costoBase, 0) / salidas.length)
+          : 0;
         return (
           <div className="tooltip" style={{
             left: `${((c.x - vbX) / vbW) * 100}%`,
@@ -217,6 +221,9 @@ export function MapaRutas({ estado, ciudadSel, setCiudadSel, rutaResaltada }: Pr
           }}>
             <div className="t-name">{c.nombre}</div>
             <div className="t-meta">{c.pais} · {grado} {grado === 1 ? 'ruta' : 'rutas'}</div>
+            {salidas.length > 0 && (
+              <div className="t-meta" style={{ marginTop: 4 }}>Tarifa promedio: ${costoProm}</div>
+            )}
           </div>
         );
       })()}
