@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sidebar, type SectionId } from './components/Sidebar';
 import { PageHeader, HEADS } from './components/PageHeader';
 import { MapaRutas } from './components/MapaRutas';
+import { MatrizInteractiva } from './components/MatrizInteractiva';
 import { useEstado } from './lib/state';
 import { totalRutasUnicas } from './lib/matrix';
 
@@ -30,6 +31,8 @@ export default function App() {
               setCiudadSel={setCiudadSel}
               rutaResaltada={rutaResaltada}
             />
+          ) : section === 'matriz' ? (
+            <MatrizInteractiva estado={estado} />
           ) : (
             <div style={{ padding: 40, color: 'var(--ink-3)' }}>
               Vista <strong>{section}</strong> — pendiente de portar.
