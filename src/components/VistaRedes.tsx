@@ -28,6 +28,10 @@ export function VistaRedes({ estado }: Props) {
     ['Matriz A', 'Tabla de adyacencia / enrutamiento'],
     ['Producto booleano A²', 'Cálculo de rutas de 2 saltos'],
     ['Conectividad de la red', 'Alcanzabilidad / reachability'],
+    ['Costo de ruta ($)', 'Métrica de enlace (bandwidth/latency en OSPF)'],
+    ['Dijkstra (mejor ruta)', 'Algoritmo de OSPF para tabla de enrutamiento'],
+    ['Floyd-Warshall (matriz D)', 'Vector de distancias en RIP / DV routing'],
+    ['Multi-criterio (costo + tiempo)', 'Path attributes en BGP (AS-path, MED, local pref)'],
   ];
 
   return (
@@ -96,6 +100,34 @@ export function VistaRedes({ estado }: Props) {
               <div className="hub-count">{c.grado} enlaces</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 24 }}>
+        <div className="card-head">
+          <div>
+            <div className="card-title">Por qué tu app de vuelos y tu router usan el mismo código</div>
+            <div className="card-sub">Dijkstra y Floyd-Warshall son los algoritmos que mueven internet</div>
+          </div>
+        </div>
+        <div className="card-body">
+          <p style={{ marginBottom: 12 }}>
+            Cuando este planificador busca la <strong>ruta más barata</strong> entre Lima y Madrid,
+            ejecuta el mismo algoritmo que tu router corre cada vez que envías un paquete a un servidor:
+            <strong> Dijkstra sobre una matriz de costos ponderados</strong>.
+          </p>
+          <p style={{ marginBottom: 12 }}>
+            En OSPF (Open Shortest Path First, protocolo dominante en redes corporativas), cada router
+            mantiene una matriz idéntica a nuestra <span className="mono">C</span>: las "aristas" son
+            enlaces de red, los "costos" son métricas como ancho de banda y latencia. El router corre Dijkstra
+            desde sí mismo y obtiene la tabla de enrutamiento — exactamente lo que hacemos para decirte
+            "vuela vía Bogotá, te ahorras $120".
+          </p>
+          <p>
+            La matriz <span className="mono">D</span> que ves en la sección Matriz (Floyd-Warshall sobre C)
+            es el equivalente a lo que protocolos como RIP calculan continuamente: el costo mínimo de cada
+            origen a cada destino, sin importar cuántos saltos haya en medio.
+          </p>
         </div>
       </div>
     </div>
