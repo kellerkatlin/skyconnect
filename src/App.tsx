@@ -3,20 +3,26 @@ import { Sidebar, type SectionId } from './components/Sidebar';
 import { PageHeader, HEADS } from './components/PageHeader';
 import { MapaRutas } from './components/MapaRutas';
 import { MatrizInteractiva } from './components/MatrizInteractiva';
+import { BuscadorRuta } from './components/BuscadorRuta';
 import { useEstado } from './lib/state';
 import { totalRutasUnicas } from './lib/matrix';
 
 export default function App() {
   const [section, setSection] = useState<SectionId>('mapa');
   const [ciudadSel, setCiudadSel] = useState<number | null>(null);
-  const [rutaResaltada, setRutaResaltada] = useState<number[] | null>(null);
+  const [rutaResaltada, setRutaResaltadaState] = useState<number[] | null>(null);
+  const [origen, setOrigen] = useState<number | null>(null);
+  const [destino, setDestino] = useState<number | null>(null);
   const estado = useEstado();
+
+  // Wrapper: cuando el buscador resalta una ruta truthy, navegar al mapa.
+  const setRutaResaltada = (p: number[] | null) => {
+    setRutaResaltadaState(p);
+    if (p && p.length > 0) setSection('mapa');
+  };
   const n = estado.ciudades.length;
   const totalRutas = totalRutasUnicas(estado.A);
   const head = HEADS[section];
-
-  // silence unused (for now, until later sections wire them up)
-  void setRutaResaltada;
 
   return (
     <div className="app">
@@ -33,6 +39,15 @@ export default function App() {
             />
           ) : section === 'matriz' ? (
             <MatrizInteractiva estado={estado} />
+          ) : section === 'buscar' ? (
+            <BuscadorRuta
+              estado={estado}
+              origen={origen}
+              setOrigen={setOrigen}
+              destino={destino}
+              setDestino={setDestino}
+              setRutaResaltada={setRutaResaltada}
+            />
           ) : (
             <div style={{ padding: 40, color: 'var(--ink-3)' }}>
               Vista <strong>{section}</strong> — pendiente de portar.
