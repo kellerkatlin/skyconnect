@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { useEstado } from '../lib/state';
 import type { RegionKey } from '../lib/types';
 import type { ToastInfo } from './Toast';
+import { generarCostoYTiempo } from '../lib/pricing';
 
 type Estado = ReturnType<typeof useEstado>;
 
@@ -22,6 +23,21 @@ export function VistaAgregar({ estado, setToast }: Props) {
   // Form ruta
   const [o, setO] = useState<string>('');
   const [d, setD] = useState<string>('');
+  const [costo, setCosto] = useState<number>(0);
+  const [duracion, setDuracion] = useState<number>(0);
+
+  const sugerido = useMemo(() => {
+    if (o === '' || d === '' || +o === +d) return { costoBase: 0, duracionMin: 0 };
+    return generarCostoYTiempo(ciudades[+o], ciudades[+d]);
+  }, [o, d, ciudades]);
+
+  useEffect(() => {
+    if (o !== '' && d !== '' && +o !== +d) {
+      setCosto(sugerido.costoBase);
+      setDuracion(sugerido.duracionMin);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [o, d]);
 
   function agregarCiudad() {
     if (!nombre.trim() || !pais.trim()) {
@@ -29,7 +45,6 @@ export function VistaAgregar({ estado, setToast }: Props) {
       return;
     }
     const r = regiones[region];
-    // Posición aproximada (centro de la región) con jitter
     let x = 400;
     let y = 400;
     if (r.ids.length) {
@@ -47,7 +62,7 @@ export function VistaAgregar({ estado, setToast }: Props) {
       setToast({ msg: 'Selecciona dos ciudades distintas', err: true });
       return;
     }
-    const ok = estado.agregarRuta(+o, +d);
+    const ok = estado.agregarRuta(+o, +d, costo, duracion);
     if (!ok) {
       setToast({ msg: 'Esa ruta ya existe', err: true });
       return;
@@ -55,6 +70,8 @@ export function VistaAgregar({ estado, setToast }: Props) {
     setToast({ msg: `Ruta ${ciudades[+o].nombre} ↔ ${ciudades[+d].nombre} agregada` });
     setO('');
     setD('');
+    setCosto(0);
+    setDuracion(0);
   }
 
   return (
@@ -69,7 +86,7 @@ export function VistaAgregar({ estado, setToast }: Props) {
           <div className="card-head">
             <div>
               <div className="card-title">Agregar nueva ruta</div>
-              <div className="card-sub">Crea un enlace bidireccional entre dos ciudades existentes</div>
+              <div className="card-sub">Crea un enlace bidireccional entre dos ciudades existentes. Los valores de costo y duración se sugieren automáticamente.</div>
             </div>
           </div>
           <div className="card-body">
@@ -93,12 +110,26 @@ export function VistaAgregar({ estado, setToast }: Props) {
                 </select>
               </div>
             </div>
+            <div className="form-grid" style={{ marginTop: 6 }}>
+              <div className="form-row">
+                <label className="label">Costo (USD)</label>
+                <input className="input" type="number" min={0} value={costo}
+                       onChange={e => setCosto(+e.target.value)} />
+                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Sugerido: ${sugerido.costoBase}</div>
+              </div>
+              <div className="form-row">
+                <label className="label">Duración (min)</label>
+                <input className="input" type="number" min={0} value={duracion}
+                       onChange={e => setDuracion(+e.target.value)} />
+                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Sugerido: {sugerido.duracionMin} min</div>
+              </div>
+            </div>
             <div className="form-actions" style={{ marginTop: 12 }}>
               <button className="btn primary" onClick={agregarRuta}>Agregar ruta</button>
-              <button className="btn ghost" onClick={() => { setO(''); setD(''); }}>Limpiar</button>
+              <button className="btn ghost" onClick={() => { setO(''); setD(''); setCosto(0); setDuracion(0); }}>Limpiar</button>
             </div>
             <div style={{ marginTop: 18, padding: 12, background: 'var(--paper-2)', borderRadius: 6, fontSize: 12, color: 'var(--ink-3)' }}>
-              <strong style={{ color: 'var(--ink-2)' }}>Nota:</strong> La matriz A es simétrica (red no dirigida), por lo que se actualiza A[i][j] y A[j][i] = 1, y se recalculan A² y A³ automáticamente.
+              <strong style={{ color: 'var(--ink-2)' }}>Nota:</strong> La matriz A es simétrica (red no dirigida), por lo que se actualiza A[i][j] y A[j][i] = 1, y se recalculan A², A³, C, T y D automáticamente.
             </div>
           </div>
         </div>
