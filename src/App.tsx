@@ -8,6 +8,8 @@ import { VistaCiudades } from './components/VistaCiudades';
 import { VistaStats } from './components/VistaStats';
 import { VistaGrafo } from './components/VistaGrafo';
 import { VistaRedes } from './components/VistaRedes';
+import { VistaAgregar } from './components/VistaAgregar';
+import { Toast, type ToastInfo } from './components/Toast';
 import { useEstado } from './lib/state';
 import { totalRutasUnicas } from './lib/matrix';
 
@@ -17,6 +19,7 @@ export default function App() {
   const [rutaResaltada, setRutaResaltadaState] = useState<number[] | null>(null);
   const [origen, setOrigen] = useState<number | null>(null);
   const [destino, setDestino] = useState<number | null>(null);
+  const [toast, setToast] = useState<ToastInfo>(null);
   const estado = useEstado();
 
   // Wrapper: cuando el buscador resalta una ruta truthy, navegar al mapa.
@@ -43,6 +46,8 @@ export default function App() {
             />
           ) : section === 'matriz' ? (
             <MatrizInteractiva estado={estado} />
+          ) : section === 'agregar' ? (
+            <VistaAgregar estado={estado} setToast={setToast} />
           ) : section === 'redes' ? (
             <VistaRedes estado={estado} />
           ) : section === 'grafo' ? (
@@ -67,6 +72,7 @@ export default function App() {
           )}
         </div>
       </main>
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }
