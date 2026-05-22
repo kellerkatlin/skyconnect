@@ -1,7 +1,8 @@
 import type { useEstado } from '../lib/state';
-import type { Ciudad } from '../lib/types';
+import type { Ciudad, SolicitudRuta } from '../lib/types';
 import { ArrowRight } from './Icons';
 import { hallar1Escala, hallar2Escalas } from '../lib/matrix';
+import type { SectionId } from './Sidebar';
 
 type Estado = ReturnType<typeof useEstado>;
 
@@ -12,10 +13,14 @@ type Props = {
   destino: number | null;
   setDestino: (i: number | null) => void;
   setRutaResaltada: (p: number[] | null) => void;
+  solicitudes?: SolicitudRuta[];
+  pedirRuta?: (origenId: number, destinoId: number) => void;
+  setSection?: (s: SectionId) => void;
 };
 
 export function BuscadorPorEscalas({
   estado, origen, setOrigen, destino, setDestino, setRutaResaltada,
+  solicitudes, pedirRuta, setSection,
 }: Props) {
   const { ciudades, A, A2, A3 } = estado;
 
@@ -288,6 +293,39 @@ export function BuscadorPorEscalas({
                 )}
               </div>
             </div>
+
+            {/* CTA: solicitar nueva ruta si no hay conexión */}
+            {!directo && escalas1.length === 0 && escalas2.length === 0 && origen != null && destino != null && (
+              (() => {
+                const yaPedida = solicitudes?.some(s => s.origenId === origen && s.destinoId === destino);
+                return (
+                  <div className="card" style={{ marginTop: 16, borderLeft: '4px solid var(--sky-red)' }}>
+                    <div className="card-body" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: 240 }}>
+                        <div className="card-title" style={{ marginBottom: 4 }}>
+                          {yaPedida ? 'Ruta ya solicitada' : 'No hay ruta disponible'}
+                        </div>
+                        <div className="card-sub">
+                          {yaPedida
+                            ? `Tu solicitud para ${ciudades[origen].nombre} → ${ciudades[destino].nombre} está pendiente de aprobación por la aerolínea.`
+                            : `${ciudades[origen].nombre} → ${ciudades[destino].nombre} no tiene ningún itinerario posible con 0, 1 o 2 escalas. Puedes solicitar que la aerolínea evalúe abrir este vuelo.`}
+                        </div>
+                      </div>
+                      {!yaPedida && pedirRuta && (
+                        <button className="btn primary" onClick={() => pedirRuta(origen, destino)}>
+                          Solicitar nueva ruta
+                        </button>
+                      )}
+                      {yaPedida && setSection && (
+                        <button className="btn ghost sm" onClick={() => setSection('agregar')}>
+                          Ver solicitudes
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()
+            )}
           </>
         )}
       </div>

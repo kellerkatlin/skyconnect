@@ -90,6 +90,15 @@ export function MatrizInteractiva({ estado }: Props) {
     : tipo === 'T' ? 'Duración de cada vuelo directo'
     : 'Costo mínimo entre todo par (cualquier nº de escalas)';
 
+  const explicacion: Record<MatrixType, { titulo: string; cuerpo: string }> = {
+    A:  { titulo: 'Matriz de adyacencia A', cuerpo: 'Cada celda [i, j] vale 1 si existe un vuelo directo de la ciudad i a la ciudad j, y 0 en caso contrario. Es la representación booleana del grafo: define la red base.' },
+    A2: { titulo: 'Matriz A² · caminos de 2 tramos', cuerpo: 'A² = A ∘ A con suma booleana. La celda [i, j] vale 1 si se puede llegar de i a j haciendo exactamente una escala (o también directo). Sirve para detectar cobertura indirecta.' },
+    A3: { titulo: 'Matriz A³ · caminos de 3 tramos', cuerpo: 'A³ = A² ∘ A. La celda [i, j] vale 1 si existe alguna ruta de i a j con hasta 2 escalas. Cuanto más densa la matriz, más conectada está la red.' },
+    C:  { titulo: 'Matriz de costos C', cuerpo: 'Cada celda [i, j] muestra la tarifa en dólares del vuelo directo i → j (∞ si no hay vuelo directo). El heat-map permite identificar visualmente los tramos caros y baratos.' },
+    T:  { titulo: 'Matriz de tiempos T', cuerpo: 'Cada celda [i, j] indica la duración (en minutos) del vuelo directo i → j. Es la base para encontrar la ruta más rápida.' },
+    D:  { titulo: 'Matriz de costos óptimos D', cuerpo: 'Resultado de aplicar Floyd-Warshall sobre C: D[i, j] es el costo MÍNIMO para ir de i a j combinando cualquier número de escalas. Esto es lo que alimenta al planificador "más barata".' },
+  };
+
   // Color base para celdas numéricas: D usa sky-red, C/T usan ink
   const fillNumerico = tipo === 'D' ? 'var(--sky-red)' : 'var(--ink)';
 
@@ -159,6 +168,21 @@ export function MatrizInteractiva({ estado }: Props) {
         </div>
         <div className="muted" style={{ fontSize: 12 }}>
           Pasa el cursor sobre una celda para ver el par origen–destino.
+        </div>
+      </div>
+
+      <div style={{
+        background: 'var(--paper-2)',
+        borderLeft: '3px solid var(--sky-red)',
+        padding: '12px 16px',
+        borderRadius: 4,
+        marginBottom: 16,
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>
+          {explicacion[tipo].titulo}
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+          {explicacion[tipo].cuerpo}
         </div>
       </div>
 

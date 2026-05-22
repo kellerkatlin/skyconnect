@@ -61,3 +61,10 @@ export type ReservaDemo = {
   opcion: OpcionViaje;
   createdAt: string;
 };
+
+export type SolicitudRuta = {
+  id: string;
+  origenId: number;
+  destinoId: number;
+  createdAt: string;
+};

@@ -42,10 +42,29 @@ export function Planificador({ estado, origen, setOrigen, destino, setDestino, s
     });
   }, [rutas, origen, destino, maxEscalas, presupuesto, duracionMax, multPrecio, pasajeros]);
 
+  // Deduplica opciones por path (cuando la misma ruta cae en varios criterios)
+  const opcionesUnicas = useMemo(() => {
+    if (!resultado) return [];
+    const orden = [resultado.barata, resultado.rapida, resultado.balance];
+    const seen = new Map<string, typeof resultado.barata>();
+    for (const opc of orden) {
+      if (!opc) continue;
+      const key = opc.path.join('-');
+      const prev = seen.get(key);
+      if (prev) {
+        // mergear criterios para no perder etiquetas
+        const merged = { ...prev, criterios: Array.from(new Set([...(prev.criterios), ...opc.criterios])) };
+        seen.set(key, merged);
+      } else {
+        seen.set(key, opc);
+      }
+    }
+    return Array.from(seen.values()).filter((x): x is NonNullable<typeof x> => x != null);
+  }, [resultado]);
+
   function reservar(opcionIdx: number) {
     if (!resultado) return;
-    const opciones = [resultado.barata, resultado.rapida, resultado.balance].filter(Boolean);
-    const opcion = opciones[opcionIdx];
+    const opcion = opcionesUnicas[opcionIdx];
     if (!opcion) return;
     const o = ciudades[origen!], d = ciudades[destino!];
     const codigo = generarCodigo(o.nombre, d.nombre);
@@ -153,20 +172,25 @@ export function Planificador({ estado, origen, setOrigen, destino, setDestino, s
           </div></div>
         ) : (
           <>
-            {[resultado.barata, resultado.rapida, resultado.balance]
-              .filter((x): x is NonNullable<typeof x> => x != null)
-              .map((opc, idx) => (
-                <OpcionViajeCard
-                  key={idx}
-                  opcion={opc}
-                  ciudades={ciudades}
-                  pasajeros={pasajeros}
-                  multiplicadorPrecio={multPrecio}
-                  onSeleccionar={() => reservar(idx)}
-                />
-              ))}
+            {opcionesUnicas.length === 1 && resultado.total >= 1 && (
+              <div className="card" style={{ background: 'var(--paper-2)', marginBottom: 12 }}>
+                <div className="card-body" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                  Solo existe <strong>1 itinerario</strong> compatible con tus filtros, por lo que se etiqueta como la más barata, la más rápida y el mejor balance simultáneamente. Amplía el presupuesto, la duración o el nº de escalas para ver alternativas.
+                </div>
+              </div>
+            )}
+            {opcionesUnicas.map((opc, idx) => (
+              <OpcionViajeCard
+                key={opc.path.join('-')}
+                opcion={opc}
+                ciudades={ciudades}
+                pasajeros={pasajeros}
+                multiplicadorPrecio={multPrecio}
+                onSeleccionar={() => reservar(idx)}
+              />
+            ))}
             <div className="muted" style={{ fontSize: 12, marginTop: 8, textAlign: 'right' }}>
-              {resultado.total} {resultado.total === 1 ? 'ruta evaluada' : 'rutas evaluadas'}
+              {opcionesUnicas.length} {opcionesUnicas.length === 1 ? 'opción única' : 'opciones distintas'} · {resultado.total} {resultado.total === 1 ? 'ruta evaluada' : 'rutas evaluadas'}
             </div>
           </>
         )}

@@ -1,17 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { useEstado } from '../lib/state';
-import type { RegionKey } from '../lib/types';
+import type { RegionKey, SolicitudRuta } from '../lib/types';
 import type { ToastInfo } from './Toast';
 import { generarCostoYTiempo } from '../lib/pricing';
+import { Check, X } from './Icons';
 
 type Estado = ReturnType<typeof useEstado>;
 
 type Props = {
   estado: Estado;
   setToast: (t: ToastInfo) => void;
+  solicitudes: SolicitudRuta[];
+  aprobarSolicitud: (id: string, costo: number, duracion: number) => boolean;
+  rechazarSolicitud: (id: string) => void;
 };
 
-export function VistaAgregar({ estado, setToast }: Props) {
+export function VistaAgregar({ estado, setToast, solicitudes, aprobarSolicitud, rechazarSolicitud }: Props) {
   const { ciudades, regiones } = estado;
   const [tab, setTab] = useState<'ruta' | 'ciudad'>('ruta');
 
@@ -167,6 +171,158 @@ export function VistaAgregar({ estado, setToast }: Props) {
           </div>
         </div>
       )}
+
+      {/* Bandeja de solicitudes de pasajeros */}
+      <SolicitudesPendientes
+        solicitudes={solicitudes}
+        estado={estado}
+        aprobarSolicitud={aprobarSolicitud}
+        rechazarSolicitud={rechazarSolicitud}
+        setToast={setToast}
+      />
     </div>
   );
 }
+
+type SolProps = {
+  solicitudes: SolicitudRuta[];
+  estado: Estado;
+  aprobarSolicitud: (id: string, costo: number, duracion: number) => boolean;
+  rechazarSolicitud: (id: string) => void;
+  setToast: (t: ToastInfo) => void;
+};
+
+function SolicitudesPendientes({ solicitudes, estado, aprobarSolicitud, rechazarSolicitud, setToast }: SolProps) {
+  return (
+    <div className="card" style={{ marginTop: 24 }}>
+      <div className="card-head">
+        <div>
+          <div className="card-title">
+            Solicitudes pendientes de pasajeros
+            {solicitudes.length > 0 && (
+              <span style={{
+                marginLeft: 10, fontSize: 12, fontWeight: 600,
+                background: 'var(--sky-red)', color: 'white',
+                padding: '2px 8px', borderRadius: 10,
+              }}>{solicitudes.length}</span>
+            )}
+          </div>
+          <div className="card-sub">
+            Cuando un pasajero busca una ruta inexistente, puede solicitarla aquí.
+            Aprueba (✓) ajustando costo y duración, o rechaza (✕) para descartar.
+          </div>
+        </div>
+      </div>
+      <div className="card-body">
+        {solicitudes.length === 0 ? (
+          <div className="empty-state" style={{ padding: 20, textAlign: 'center', color: 'var(--ink-3)' }}>
+            No hay solicitudes pendientes en este momento.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {solicitudes.map(sol => (
+              <SolicitudRow
+                key={sol.id}
+                sol={sol}
+                estado={estado}
+                onAprobar={(costo, duracion) => {
+                  const ok = aprobarSolicitud(sol.id, costo, duracion);
+                  if (ok) {
+                    const o = estado.ciudades[sol.origenId];
+                    const d = estado.ciudades[sol.destinoId];
+                    setToast({ msg: `Ruta ${o.nombre} ↔ ${d.nombre} aprobada y agregada` });
+                  }
+                }}
+                onRechazar={() => {
+                  rechazarSolicitud(sol.id);
+                  setToast({ msg: 'Solicitud rechazada' });
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type RowProps = {
+  sol: SolicitudRuta;
+  estado: Estado;
+  onAprobar: (costo: number, duracion: number) => void;
+  onRechazar: () => void;
+};
+
+function SolicitudRow({ sol, estado, onAprobar, onRechazar }: RowProps) {
+  const sugerido = useMemo(
+    () => generarCostoYTiempo(estado.ciudades[sol.origenId], estado.ciudades[sol.destinoId]),
+    [sol.origenId, sol.destinoId, estado.ciudades],
+  );
+  const [costo, setCosto] = useState(sugerido.costoBase);
+  const [duracion, setDuracion] = useState(sugerido.duracionMin);
+  const o = estado.ciudades[sol.origenId];
+  const d = estado.ciudades[sol.destinoId];
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr auto auto auto',
+      gap: 12,
+      alignItems: 'center',
+      padding: 12,
+      background: 'var(--paper-2)',
+      borderRadius: 6,
+      borderLeft: '3px solid var(--sky-red)',
+    }}>
+      <div>
+        <div style={{ fontWeight: 600, color: 'var(--ink)' }}>
+          {o.nombre}, {o.pais} <span style={{ color: 'var(--sky-red)', margin: '0 6px' }}>→</span> {d.nombre}, {d.pais}
+        </div>
+        <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+          ID {sol.id} · solicitada {new Date(sol.createdAt).toLocaleDateString()}
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <label className="label" style={{ fontSize: 10 }}>Costo (USD)</label>
+        <input
+          className="input"
+          type="number"
+          min={0}
+          style={{ width: 90 }}
+          value={costo}
+          onChange={e => setCosto(+e.target.value)}
+        />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <label className="label" style={{ fontSize: 10 }}>Duración (min)</label>
+        <input
+          className="input"
+          type="number"
+          min={0}
+          style={{ width: 90 }}
+          value={duracion}
+          onChange={e => setDuracion(+e.target.value)}
+        />
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          className="btn primary sm"
+          title="Aprobar y agregar a la red"
+          onClick={() => onAprobar(costo, duracion)}
+          style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+        >
+          <Check style={{ width: 14, height: 14 }} /> Aprobar
+        </button>
+        <button
+          className="btn ghost sm"
+          title="Rechazar solicitud"
+          onClick={onRechazar}
+          style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+        >
+          <X style={{ width: 14, height: 14 }} />
+        </button>
+      </div>
+    </div>
+  );
+}
+

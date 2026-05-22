@@ -1,6 +1,6 @@
 import { Plane2, Map, Grid, Search, List, Network, Stats, Plus, Compass } from './Icons';
 
-export type SectionId = 'mapa' | 'ciudades' | 'matriz' | 'buscar' | 'stats' | 'grafo' | 'redes' | 'agregar';
+export type SectionId = 'mapa' | 'ciudades' | 'matriz' | 'buscar' | 'planificador' | 'stats' | 'grafo' | 'redes' | 'agregar';
 
 type Props = {
   section: SectionId;
@@ -19,12 +19,13 @@ const items: NavItem[] = [
   { id: 'ciudades', label: 'Ciudades',            icon: List,    num: '02' },
   { id: 'matriz',   label: 'Matriz A / A² / A³',  icon: Grid,    num: '03' },
   { group: 'Análisis' },
-  { id: 'buscar',   label: 'Buscar ruta',         icon: Search,  num: '04' },
-  { id: 'stats',    label: 'Estadísticas',        icon: Stats,   num: '05' },
-  { id: 'grafo',    label: 'Vista grafo',         icon: Network, num: '06' },
-  { id: 'redes',    label: 'Redes informáticas',  icon: Compass, num: '07' },
+  { id: 'buscar',        label: 'Buscar ruta',          icon: Search,  num: '04' },
+  { id: 'planificador',  label: 'Planificador de viaje', icon: Plane2,  num: '05' },
+  { id: 'stats',         label: 'Estadísticas',         icon: Stats,   num: '06' },
+  { id: 'grafo',         label: 'Vista grafo',          icon: Network, num: '07' },
+  { id: 'redes',         label: 'Redes informáticas',   icon: Compass, num: '08' },
   { group: 'Edición' },
-  { id: 'agregar',  label: 'Agregar ciudad/ruta', icon: Plus,    num: '08' },
+  { id: 'agregar',       label: 'Agregar ciudad/ruta',  icon: Plus,    num: '09' },
 ];
 
 export function Sidebar({ section, setSection, n, totalRutas }: Props) {
