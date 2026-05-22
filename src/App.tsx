@@ -4,6 +4,7 @@ import { PageHeader, HEADS } from './components/PageHeader';
 import { MapaRutas } from './components/MapaRutas';
 import { MatrizInteractiva } from './components/MatrizInteractiva';
 import { BuscadorRuta } from './components/BuscadorRuta';
+import { VistaCiudades } from './components/VistaCiudades';
 import { useEstado } from './lib/state';
 import { totalRutasUnicas } from './lib/matrix';
 
@@ -39,6 +40,8 @@ export default function App() {
             />
           ) : section === 'matriz' ? (
             <MatrizInteractiva estado={estado} />
+          ) : section === 'ciudades' ? (
+            <VistaCiudades estado={estado} setOrigen={setOrigen} setSection={setSection} />
           ) : section === 'buscar' ? (
             <BuscadorRuta
               estado={estado}
