@@ -28,6 +28,24 @@ export function VistaStats({ estado }: Props) {
   // ciudades aisladas
   const aisladas = grados.filter(g => g.grado === 0);
 
+  // Métricas con pesos (Fase 2)
+  const rutas = estado.rutas;
+  const costoPromedio = rutas.length ? rutas.reduce((s, r) => s + r.costoBase, 0) / rutas.length : 0;
+  const duracionPromedio = rutas.length ? rutas.reduce((s, r) => s + r.duracionMin, 0) / rutas.length : 0;
+  const tramoMasCaro = rutas.length
+    ? rutas.reduce((max, r) => r.costoBase > max.costoBase ? r : max, rutas[0])
+    : null;
+
+  // Hub más eficiente (tarifa promedio más baja entre top 5 hubs)
+  const topHubs = grados.slice(0, 5);
+  const hubEficiente = topHubs.length
+    ? topHubs.reduce((best, h) => {
+        const salidas = rutas.filter(r => r.from === h.id || r.to === h.id);
+        const prom = salidas.length ? salidas.reduce((s, r) => s + r.costoBase, 0) / salidas.length : Infinity;
+        return prom < best.prom ? { c: h, prom } : best;
+      }, { c: topHubs[0], prom: Infinity })
+    : null;
+
   return (
     <div>
       <div className="stat-grid" style={{ marginBottom: 24 }}>
@@ -51,6 +69,30 @@ export function VistaStats({ estado }: Props) {
           <div className="v tabular">{(alc2 / totalPares * 100).toFixed(0)}%</div>
           <div className="s">Pares alcanzables ≤ 3 tramos</div>
         </div>
+        <div className="stat">
+          <div className="l">Costo promedio directo</div>
+          <div className="v tabular">${Math.round(costoPromedio)}</div>
+          <div className="s">Tarifa media por vuelo</div>
+        </div>
+        <div className="stat">
+          <div className="l">Duración promedio</div>
+          <div className="v tabular">{(duracionPromedio / 60).toFixed(1)}h</div>
+          <div className="s">Vuelo directo medio</div>
+        </div>
+        {tramoMasCaro && (
+          <div className="stat">
+            <div className="l">Tramo más caro</div>
+            <div className="v tabular">${tramoMasCaro.costoBase}</div>
+            <div className="s">{ciudades[tramoMasCaro.from].nombre} ↔ {ciudades[tramoMasCaro.to].nombre}</div>
+          </div>
+        )}
+        {hubEficiente && isFinite(hubEficiente.prom) && (
+          <div className="stat">
+            <div className="l">Hub más eficiente</div>
+            <div className="v tabular" style={{ fontSize: 22 }}>{hubEficiente.c.nombre}</div>
+            <div className="s">Tarifa promedio: ${Math.round(hubEficiente.prom)}</div>
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 24 }}>
