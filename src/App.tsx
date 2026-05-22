@@ -6,6 +6,7 @@ import { MatrizInteractiva } from './components/MatrizInteractiva';
 import { BuscadorRuta } from './components/BuscadorRuta';
 import { VistaCiudades } from './components/VistaCiudades';
 import { VistaStats } from './components/VistaStats';
+import { VistaGrafo } from './components/VistaGrafo';
 import { useEstado } from './lib/state';
 import { totalRutasUnicas } from './lib/matrix';
 
@@ -41,6 +42,8 @@ export default function App() {
             />
           ) : section === 'matriz' ? (
             <MatrizInteractiva estado={estado} />
+          ) : section === 'grafo' ? (
+            <VistaGrafo estado={estado} />
           ) : section === 'stats' ? (
             <VistaStats estado={estado} />
           ) : section === 'ciudades' ? (
