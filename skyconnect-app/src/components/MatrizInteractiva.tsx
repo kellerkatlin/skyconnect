@@ -195,43 +195,6 @@ export function MatrizInteractiva({ estado }: Props) {
     return null;
   }
 
-  // Readout inferior (texto estático)
-  function renderHoverValor() {
-    if (!hover) return null;
-    if (Mbool) {
-      const v = Mbool[hover.i][hover.j];
-      return (
-        <span>
-          <strong style={{ color: 'var(--ink)' }}>[{hover.i+1},{hover.j+1}] = {v}</strong>
-          {' — '}{ciudades[hover.i].nombre} → {ciudades[hover.j].nombre}{' '}
-          {hover.i === hover.j ? '(diagonal)' : v === 1
-            ? <span style={{ color: 'var(--sky-red)' }}>✓ alcanzable</span>
-            : <span className="muted">sin conexión</span>}
-        </span>
-      );
-    }
-    if (Mnum) {
-      const v = Mnum[hover.i][hover.j];
-      const isInf = !isFinite(v);
-      let valTxt: string;
-      if (hover.i === hover.j) valTxt = '0';
-      else if (isInf) valTxt = '∞';
-      else if (tipo === 'T') valTxt = fmtMinutos(v);
-      else if (tipo === 'D') valTxt = `$${Math.round(v)} (mín)`;
-      else valTxt = `$${Math.round(v)}`;
-      return (
-        <span>
-          <strong style={{ color: 'var(--ink)' }}>[{hover.i+1},{hover.j+1}] = {valTxt}</strong>
-          {' — '}{ciudades[hover.i].nombre} → {ciudades[hover.j].nombre}{' '}
-          {hover.i === hover.j ? '(diagonal)' : isInf
-            ? <span className="muted">sin conexión</span>
-            : <span style={{ color: tipo === 'D' ? 'var(--sky-red)' : 'var(--ink-2)' }}>✓</span>}
-        </span>
-      );
-    }
-    return null;
-  }
-
   const tooltipData = hover ? buildTooltip(hover.i, hover.j) : null;
 
   // Posición del tooltip: aparece a la derecha del cursor, se voltea si está cerca del borde
