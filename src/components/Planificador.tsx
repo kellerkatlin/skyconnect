@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Clase } from '../lib/types';
+import type { SectionId } from './Sidebar';
 import { topKRutas } from '../lib/pathfinding';
 import { multiplicadorClase, multiplicadorFecha } from '../lib/pricing';
 import { saveReserva } from '../lib/storage';
@@ -9,11 +10,10 @@ import type { useEstado } from '../lib/state';
 type Props = {
   estado: ReturnType<typeof useEstado>;
   origen: number | null;
-  setOrigen: (v: number | null) => void;
   destino: number | null;
-  setDestino: (v: number | null) => void;
   setRutaResaltada: (path: number[] | null) => void;
   setToast: (t: { msg: string; err?: boolean } | null) => void;
+  setSection: (s: SectionId) => void;
 };
 
 function generarCodigo(origenNombre: string, destinoNombre: string): string {
@@ -22,7 +22,11 @@ function generarCodigo(origenNombre: string, destinoNombre: string): string {
   return `SKY-${code(origenNombre)}${code(destinoNombre)}-${r}`;
 }
 
-export function Planificador({ estado, origen, setOrigen, destino, setDestino, setRutaResaltada, setToast }: Props) {
+function iata(nombre: string): string {
+  return nombre.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);
+}
+
+export function Planificador({ estado, origen, destino, setRutaResaltada, setToast, setSection }: Props) {
   const { ciudades, rutas } = estado;
   const [fecha, setFecha] = useState<string>('');
   const [pasajeros, setPasajeros] = useState<number>(1);
@@ -39,33 +43,11 @@ export function Planificador({ estado, origen, setOrigen, destino, setDestino, s
       maxEscalas,
       presupuestoMax: presupuesto === '' ? undefined : (presupuesto / multPrecio / pasajeros),
       duracionMaxMin: duracionMax === '' ? undefined : duracionMax * 60,
+      multiplicadorPrecio: multPrecio,
     });
   }, [rutas, origen, destino, maxEscalas, presupuesto, duracionMax, multPrecio, pasajeros]);
 
-  // Deduplica opciones por path (cuando la misma ruta cae en varios criterios)
-  const opcionesUnicas = useMemo(() => {
-    if (!resultado) return [];
-    const orden = [resultado.barata, resultado.rapida, resultado.balance];
-    const seen = new Map<string, typeof resultado.barata>();
-    for (const opc of orden) {
-      if (!opc) continue;
-      const key = opc.path.join('-');
-      const prev = seen.get(key);
-      if (prev) {
-        // mergear criterios para no perder etiquetas
-        const merged = { ...prev, criterios: Array.from(new Set([...(prev.criterios), ...opc.criterios])) };
-        seen.set(key, merged);
-      } else {
-        seen.set(key, opc);
-      }
-    }
-    return Array.from(seen.values()).filter((x): x is NonNullable<typeof x> => x != null);
-  }, [resultado]);
-
-  function reservar(opcionIdx: number) {
-    if (!resultado) return;
-    const opcion = opcionesUnicas[opcionIdx];
-    if (!opcion) return;
+  function reservar(opcion: NonNullable<typeof resultado>['todas'][number]) {
     const o = ciudades[origen!], d = ciudades[destino!];
     const codigo = generarCodigo(o.nombre, d.nombre);
     saveReserva({
@@ -89,30 +71,77 @@ export function Planificador({ estado, origen, setOrigen, destino, setDestino, s
           <div className="card-head">
             <div>
               <div className="card-title">Itinerario</div>
-              <div className="card-sub">Compara las 3 mejores opciones: la más barata, la más rápida y el mejor balance</div>
+              <div className="card-sub">Todas las rutas disponibles ordenadas de menor a mayor precio</div>
             </div>
           </div>
           <div className="card-body">
-            <div className="form-row">
-              <label className="label">Origen</label>
-              <select className="select" value={origen ?? ''}
-                      onChange={e => setOrigen(e.target.value === '' ? null : +e.target.value)}>
-                <option value="">— Selecciona —</option>
-                {ciudades.map(c => (
-                  <option key={c.id} value={c.id}>{String(c.id + 1).padStart(2, '0')} · {c.nombre}, {c.pais}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-row">
-              <label className="label">Destino</label>
-              <select className="select" value={destino ?? ''}
-                      onChange={e => setDestino(e.target.value === '' ? null : +e.target.value)}>
-                <option value="">— Selecciona —</option>
-                {ciudades.map(c => (
-                  <option key={c.id} value={c.id}>{String(c.id + 1).padStart(2, '0')} · {c.nombre}, {c.pais}</option>
-                ))}
-              </select>
-            </div>
+            {/* Ruta seleccionada desde Buscar ruta — solo lectura */}
+            {origen == null || destino == null ? (
+              <div style={{
+                padding: '16px 20px', marginBottom: 16,
+                background: 'var(--paper-2)', borderRadius: 8,
+                border: '1px dashed var(--paper-3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              }}>
+                <div style={{ color: 'var(--ink-3)', fontSize: 13 }}>
+                  Primero selecciona un origen y destino en <strong>Buscar ruta</strong>.
+                </div>
+                <button className="btn ghost sm" onClick={() => setSection('buscar')}>
+                  Ir a Buscar ruta →
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                marginBottom: 16, borderRadius: 8, overflow: 'hidden',
+                border: '1px solid var(--paper-3)',
+                boxShadow: 'var(--shadow-sm)',
+              }}>
+                {/* Header rojo */}
+                <div style={{
+                  background: 'var(--sky-red)', padding: '7px 16px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' }}>
+                    Ruta seleccionada
+                  </div>
+                  <button
+                    className="btn ghost sm"
+                    onClick={() => setSection('buscar')}
+                    style={{ color: 'rgba(255,255,255,0.9)', border: '1px solid rgba(255,255,255,0.35)', fontSize: 11, padding: '2px 10px' }}
+                  >
+                    Cambiar →
+                  </button>
+                </div>
+                {/* Cuerpo mini boarding pass */}
+                <div style={{ background: 'var(--paper-2)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ textAlign: 'center', minWidth: 64 }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 1, fontFamily: 'var(--font-mono)', color: 'var(--ink)', lineHeight: 1 }}>
+                      {iata(ciudades[origen].nombre)}
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>
+                      {ciudades[origen].nombre}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--ink-4)' }}>{ciudades[origen].pais}</div>
+                  </div>
+
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ flex: 1, height: 1, background: 'var(--paper-3)' }} />
+                    <span style={{ fontSize: 18, color: 'var(--sky-red)', lineHeight: 1 }}>✈</span>
+                    <div style={{ flex: 1, height: 1, background: 'var(--paper-3)' }} />
+                  </div>
+
+                  <div style={{ textAlign: 'center', minWidth: 64 }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 1, fontFamily: 'var(--font-mono)', color: 'var(--ink)', lineHeight: 1 }}>
+                      {iata(ciudades[destino].nombre)}
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>
+                      {ciudades[destino].nombre}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--ink-4)' }}>{ciudades[destino].pais}</div>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="form-grid-3">
               <div className="form-row">
                 <label className="label">Fecha</label>
@@ -133,19 +162,19 @@ export function Planificador({ estado, origen, setOrigen, destino, setDestino, s
             </div>
             <div className="form-grid-3" style={{ marginTop: 4 }}>
               <div className="form-row">
-                <label className="label">Presupuesto máx (USD)</label>
+                <label className="label" style={{ minHeight: 34 }}>Presupuesto máx (USD)</label>
                 <input className="input" type="number" min={0} placeholder="sin límite"
                        value={presupuesto}
                        onChange={e => setPresupuesto(e.target.value === '' ? '' : +e.target.value)} />
               </div>
               <div className="form-row">
-                <label className="label">Duración máx (h)</label>
+                <label className="label" style={{ minHeight: 34 }}>Duración máx (h)</label>
                 <input className="input" type="number" min={0} placeholder="sin límite"
                        value={duracionMax}
                        onChange={e => setDuracionMax(e.target.value === '' ? '' : +e.target.value)} />
               </div>
               <div className="form-row">
-                <label className="label">Máx escalas</label>
+                <label className="label" style={{ minHeight: 34 }}>Máx escalas</label>
                 <select className="select" value={maxEscalas} onChange={e => setMaxEscalas(+e.target.value as 0|1|2)}>
                   <option value={0}>Solo directo</option>
                   <option value={1}>Hasta 1 escala</option>
@@ -172,25 +201,21 @@ export function Planificador({ estado, origen, setOrigen, destino, setDestino, s
           </div></div>
         ) : (
           <>
-            {opcionesUnicas.length === 1 && resultado.total >= 1 && (
-              <div className="card" style={{ background: 'var(--paper-2)', marginBottom: 12 }}>
-                <div className="card-body" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-                  Solo existe <strong>1 itinerario</strong> compatible con tus filtros, por lo que se etiqueta como la más barata, la más rápida y el mejor balance simultáneamente. Amplía el presupuesto, la duración o el nº de escalas para ver alternativas.
-                </div>
-              </div>
-            )}
-            {opcionesUnicas.map((opc, idx) => (
+            {resultado.todas.map((opc, idx) => (
               <OpcionViajeCard
                 key={opc.path.join('-')}
                 opcion={opc}
                 ciudades={ciudades}
                 pasajeros={pasajeros}
                 multiplicadorPrecio={multPrecio}
-                onSeleccionar={() => reservar(idx)}
+                clase={clase}
+                posicion={idx + 1}
+                totalOpciones={resultado.todas.length}
+                onSeleccionar={() => reservar(opc)}
               />
             ))}
             <div className="muted" style={{ fontSize: 12, marginTop: 8, textAlign: 'right' }}>
-              {opcionesUnicas.length} {opcionesUnicas.length === 1 ? 'opción única' : 'opciones distintas'} · {resultado.total} {resultado.total === 1 ? 'ruta evaluada' : 'rutas evaluadas'}
+              {resultado.total} {resultado.total === 1 ? 'ruta encontrada' : 'rutas encontradas'} · ordenadas por precio
             </div>
           </>
         )}

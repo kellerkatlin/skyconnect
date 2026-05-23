@@ -40,9 +40,9 @@ export const HEADS: Record<string, { eyebrow: string; title: string; sub: string
     sub: 'Listado completo agrupado por región. Haz clic en una ciudad para usarla como origen en el buscador.',
   },
   matriz: {
-    eyebrow: '03 · Matriz de adyacencia',
-    title: 'Matriz A, A² y A³',
-    sub: 'Representación matricial de la red. La matriz A modela vuelos directos; sus potencias booleanas, conexiones con escalas.',
+    eyebrow: '03 · Matrices',
+    title: 'Matrices de la red',
+    sub: 'Explora la red desde distintos ángulos: qué ciudades se conectan directamente, con cuántas escalas se puede llegar a cada destino y cuál es la ruta más económica disponible.',
   },
   buscar: {
     eyebrow: '04 · Buscador',
@@ -54,20 +54,20 @@ export const HEADS: Record<string, { eyebrow: string; title: string; sub: string
     title: 'Planificador de viaje · costo y tiempo',
     sub: 'Compara hasta 3 opciones óptimas (más barata, más rápida y mejor balance) según presupuesto, duración máxima, clase y número de escalas.',
   },
+  reservas: {
+    eyebrow: '06 · Reservas',
+    title: 'Mis reservas',
+    sub: 'Historial de reservas confirmadas desde el planificador. Consulta detalles de cada itinerario o cancélalas cuando necesites.',
+  },
   stats: {
-    eyebrow: '06 · Análisis',
+    eyebrow: '07 · Análisis',
     title: 'Estadísticas de la red',
     sub: 'Métricas de conectividad, hubs principales y crecimiento de la cobertura por número de escalas.',
   },
   grafo: {
-    eyebrow: '07 · Estructura',
+    eyebrow: '08 · Estructura',
     title: 'Vista de grafo',
     sub: 'Cada ciudad es un nodo y cada ruta una arista. Distribución por región, sin restricción geográfica.',
-  },
-  redes: {
-    eyebrow: '08 · Aplicación',
-    title: 'Relación con redes informáticas',
-    sub: 'El mismo modelo matemático describe una red aérea y una red de routers. Mismas matrices, distintos significados.',
   },
   agregar: {
     eyebrow: '09 · Edición',

@@ -1,10 +1,13 @@
-import type { Ciudad, OpcionViaje, Criterio } from '../lib/types';
+import type { Ciudad, OpcionViaje, Criterio, Clase } from '../lib/types';
 
 type Props = {
   opcion: OpcionViaje;
   ciudades: Ciudad[];
   pasajeros: number;
   multiplicadorPrecio: number;
+  clase?: Clase;
+  posicion?: number;
+  totalOpciones?: number;
   onSeleccionar?: () => void;
 };
 
@@ -20,25 +23,51 @@ function fmtDuracion(min: number): string {
   return `${h}h ${m}min`;
 }
 
-const LABELS: Record<Criterio, string> = {
+const LABELS_ECO: Record<Criterio, string> = {
   barata: 'LA MÁS BARATA',
   rapida: 'LA MÁS RÁPIDA',
   balance: 'MEJOR BALANCE',
 };
 
+const LABELS_BUS: Record<Criterio, string> = {
+  barata: 'MEJOR PRECIO · BUSINESS',
+  rapida: 'LA MÁS RÁPIDA',
+  balance: 'MEJOR BALANCE · BUSINESS',
+};
+
 const TIEMPO_CONEXION_MIN = 90;
 
-export function OpcionViajeCard({ opcion, ciudades, pasajeros, multiplicadorPrecio, onSeleccionar }: Props) {
+export function OpcionViajeCard({ opcion, ciudades, pasajeros, multiplicadorPrecio, clase, posicion, totalOpciones, onSeleccionar }: Props) {
   const ciudadesPath = opcion.path.map(id => ciudades[id]);
   const costoFinal = Math.round(opcion.costoTotal * multiplicadorPrecio * pasajeros);
+  const LABELS = clase === 'business' ? LABELS_BUS : LABELS_ECO;
+  const tieneBadge = opcion.criterios.length > 0;
 
   return (
     <div className="opcion-card">
       <div className="opcion-card-head">
-        <div className="opcion-badges">
-          {opcion.criterios.map(c => (
-            <span key={c} className={'opcion-badge ' + c}>{LABELS[c]}</span>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {posicion != null && totalOpciones != null && (
+            <span style={{
+              fontSize: 11, fontWeight: 600, color: 'var(--ink-3)',
+              background: 'var(--paper-3)', borderRadius: 4,
+              padding: '2px 7px', letterSpacing: 0.3,
+            }}>
+              #{posicion} de {totalOpciones}
+            </span>
+          )}
+          <div className="opcion-badges">
+            {tieneBadge
+              ? opcion.criterios.map(c => (
+                  <span key={c} className={'opcion-badge ' + c}>{LABELS[c]}</span>
+                ))
+              : (
+                  <span style={{ fontSize: 11, color: 'var(--ink-4)', fontStyle: 'italic' }}>
+                    Opción alternativa
+                  </span>
+                )
+            }
+          </div>
         </div>
         {onSeleccionar && (
           <button className="btn primary sm" onClick={onSeleccionar}>Seleccionar</button>

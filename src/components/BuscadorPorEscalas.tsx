@@ -1,6 +1,7 @@
 import type { useEstado } from '../lib/state';
 import type { Ciudad, SolicitudRuta } from '../lib/types';
 import { ArrowRight } from './Icons';
+import { CiudadSelect } from './CiudadSelect';
 import { hallar1Escala, hallar2Escalas } from '../lib/matrix';
 import type { SectionId } from './Sidebar';
 
@@ -115,24 +116,14 @@ export function BuscadorPorEscalas({
           <div className="card-body">
             <div className="form-row">
               <label className="label">Ciudad de origen</label>
-              <select className="select" value={origen ?? ''}
-                      onChange={e => { setOrigen(e.target.value === '' ? null : +e.target.value); setRutaResaltada(null); }}>
-                <option value="">— Selecciona —</option>
-                {ciudades.map(c => (
-                  <option key={c.id} value={c.id}>{String(c.id + 1).padStart(2, '0')} · {c.nombre}, {c.pais}</option>
-                ))}
-              </select>
+              <CiudadSelect ciudades={ciudades} value={origen}
+                onChange={id => { setOrigen(id); setRutaResaltada(null); }} />
             </div>
 
             <div className="form-row">
               <label className="label">Ciudad de destino</label>
-              <select className="select" value={destino ?? ''}
-                      onChange={e => { setDestino(e.target.value === '' ? null : +e.target.value); setRutaResaltada(null); }}>
-                <option value="">— Selecciona —</option>
-                {ciudades.map(c => (
-                  <option key={c.id} value={c.id}>{String(c.id + 1).padStart(2, '0')} · {c.nombre}, {c.pais}</option>
-                ))}
-              </select>
+              <CiudadSelect ciudades={ciudades} value={destino}
+                onChange={id => { setDestino(id); setRutaResaltada(null); }} />
             </div>
 
             <div className="form-actions">
@@ -293,6 +284,31 @@ export function BuscadorPorEscalas({
                 )}
               </div>
             </div>
+
+            {/* CTA: planificar viaje si hay rutas */}
+            {(directo || escalas1.length > 0 || escalas2.length > 0) && setSection && (
+              <div style={{
+                marginTop: 16, padding: '16px 20px', borderRadius: 8,
+                background: 'var(--sky-red)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+              }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'white', marginBottom: 3 }}>
+                    ¿Listo para reservar?
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>
+                    Compara precios, elige clase y filtra por presupuesto en el Planificador.
+                  </div>
+                </div>
+                <button
+                  className="btn"
+                  style={{ background: 'white', color: 'var(--sky-red)', border: 'none', fontWeight: 700, whiteSpace: 'nowrap' }}
+                  onClick={() => setSection('planificador')}
+                >
+                  Planificar viaje →
+                </button>
+              </div>
+            )}
 
             {/* CTA: solicitar nueva ruta si no hay conexión */}
             {!directo && escalas1.length === 0 && escalas2.length === 0 && origen != null && destino != null && (

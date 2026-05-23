@@ -1,6 +1,6 @@
-import { Plane2, Map, Grid, Search, List, Network, Stats, Plus, Compass } from './Icons';
+import { Plane2, Map, Grid, Search, List, Network, Stats, Plus, Ticket } from './Icons';
 
-export type SectionId = 'mapa' | 'ciudades' | 'matriz' | 'buscar' | 'planificador' | 'stats' | 'grafo' | 'redes' | 'agregar';
+export type SectionId = 'mapa' | 'ciudades' | 'matriz' | 'buscar' | 'planificador' | 'reservas' | 'stats' | 'grafo' | 'agregar';
 
 type Props = {
   section: SectionId;
@@ -15,17 +15,17 @@ type NavItem =
 
 const items: NavItem[] = [
   { group: 'Red' },
-  { id: 'mapa',     label: 'Mapa de rutas',       icon: Map,     num: '01' },
-  { id: 'ciudades', label: 'Ciudades',            icon: List,    num: '02' },
-  { id: 'matriz',   label: 'Matriz A / A² / A³',  icon: Grid,    num: '03' },
+  { id: 'mapa',     label: 'Mapa de rutas',        icon: Map,     num: '01' },
+  { id: 'ciudades', label: 'Ciudades',             icon: List,    num: '02' },
+  { id: 'matriz',   label: 'Matrices',             icon: Grid,    num: '03' },
   { group: 'Análisis' },
-  { id: 'buscar',        label: 'Buscar ruta',          icon: Search,  num: '04' },
+  { id: 'buscar',        label: 'Buscar ruta',           icon: Search,  num: '04' },
   { id: 'planificador',  label: 'Planificador de viaje', icon: Plane2,  num: '05' },
-  { id: 'stats',         label: 'Estadísticas',         icon: Stats,   num: '06' },
-  { id: 'grafo',         label: 'Vista grafo',          icon: Network, num: '07' },
-  { id: 'redes',         label: 'Redes informáticas',   icon: Compass, num: '08' },
+  { id: 'reservas',      label: 'Mis reservas',          icon: Ticket,  num: '06' },
+  { id: 'stats',         label: 'Estadísticas',          icon: Stats,   num: '07' },
+  { id: 'grafo',         label: 'Vista grafo',           icon: Network, num: '08' },
   { group: 'Edición' },
-  { id: 'agregar',       label: 'Agregar ciudad/ruta',  icon: Plus,    num: '09' },
+  { id: 'agregar',       label: 'Agregar ciudad/ruta',   icon: Plus,    num: '09' },
 ];
 
 export function Sidebar({ section, setSection, n, totalRutas }: Props) {

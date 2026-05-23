@@ -3,7 +3,8 @@ import type { useEstado } from '../lib/state';
 import type { RegionKey, SolicitudRuta } from '../lib/types';
 import type { ToastInfo } from './Toast';
 import { generarCostoYTiempo } from '../lib/pricing';
-import { Check, X } from './Icons';
+import { Check, X, Trash } from './Icons';
+import { CiudadSelect } from './CiudadSelect';
 
 type Estado = ReturnType<typeof useEstado>;
 
@@ -15,8 +16,14 @@ type Props = {
   rechazarSolicitud: (id: string) => void;
 };
 
+function fmtMin(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+
 export function VistaAgregar({ estado, setToast, solicitudes, aprobarSolicitud, rechazarSolicitud }: Props) {
-  const { ciudades, regiones } = estado;
+  const { ciudades, regiones, ciudadesExtra, rutasExtra } = estado;
   const [tab, setTab] = useState<'ruta' | 'ciudad'>('ruta');
 
   // Form ciudad
@@ -25,18 +32,18 @@ export function VistaAgregar({ estado, setToast, solicitudes, aprobarSolicitud, 
   const [region, setRegion] = useState<RegionKey>('sudamerica');
 
   // Form ruta
-  const [o, setO] = useState<string>('');
-  const [d, setD] = useState<string>('');
+  const [o, setO] = useState<number | null>(null);
+  const [d, setD] = useState<number | null>(null);
   const [costo, setCosto] = useState<number>(0);
   const [duracion, setDuracion] = useState<number>(0);
 
   const sugerido = useMemo(() => {
-    if (o === '' || d === '' || +o === +d) return { costoBase: 0, duracionMin: 0 };
-    return generarCostoYTiempo(ciudades[+o], ciudades[+d]);
+    if (o == null || d == null || o === d) return { costoBase: 0, duracionMin: 0 };
+    return generarCostoYTiempo(ciudades[o], ciudades[d]);
   }, [o, d, ciudades]);
 
   useEffect(() => {
-    if (o !== '' && d !== '' && +o !== +d) {
+    if (o != null && d != null && o !== d) {
       setCosto(sugerido.costoBase);
       setDuracion(sugerido.duracionMin);
     }
@@ -49,8 +56,7 @@ export function VistaAgregar({ estado, setToast, solicitudes, aprobarSolicitud, 
       return;
     }
     const r = regiones[region];
-    let x = 400;
-    let y = 400;
+    let x = 400, y = 400;
     if (r.ids.length) {
       x = r.ids.reduce((s, i) => s + ciudades[i].x, 0) / r.ids.length + (Math.random() - 0.5) * 30;
       y = r.ids.reduce((s, i) => s + ciudades[i].y, 0) / r.ids.length + (Math.random() - 0.5) * 30;
@@ -62,20 +68,28 @@ export function VistaAgregar({ estado, setToast, solicitudes, aprobarSolicitud, 
   }
 
   function agregarRuta() {
-    if (o === '' || d === '' || +o === +d) {
+    if (o == null || d == null || o === d) {
       setToast({ msg: 'Selecciona dos ciudades distintas', err: true });
       return;
     }
-    const ok = estado.agregarRuta(+o, +d, costo, duracion);
+    const ok = estado.agregarRuta(o, d, costo, duracion);
     if (!ok) {
       setToast({ msg: 'Esa ruta ya existe', err: true });
       return;
     }
-    setToast({ msg: `Ruta ${ciudades[+o].nombre} ↔ ${ciudades[+d].nombre} agregada` });
-    setO('');
-    setD('');
-    setCosto(0);
-    setDuracion(0);
+    setToast({ msg: `Ruta ${ciudades[o].nombre} ↔ ${ciudades[d].nombre} agregada` });
+    setO(null); setD(null); setCosto(0); setDuracion(0);
+  }
+
+  function onEliminarCiudad(id: number, nombreCiudad: string) {
+    estado.eliminarCiudad(id);
+    setToast({ msg: `Ciudad "${nombreCiudad}" eliminada` });
+  }
+
+  function onEliminarRuta(from: number, to: number) {
+    const o = ciudades[from], d = ciudades[to];
+    estado.eliminarRuta(from, to);
+    setToast({ msg: `Ruta ${o.nombre} ↔ ${d.nombre} eliminada` });
   }
 
   return (
@@ -86,87 +100,217 @@ export function VistaAgregar({ estado, setToast, solicitudes, aprobarSolicitud, 
       </div>
 
       {tab === 'ruta' ? (
-        <div className="card">
-          <div className="card-head">
-            <div>
-              <div className="card-title">Agregar nueva ruta</div>
-              <div className="card-sub">Crea un enlace bidireccional entre dos ciudades existentes. Los valores de costo y duración se sugieren automáticamente.</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Formulario nueva ruta */}
+          <div className="card">
+            <div className="card-head">
+              <div>
+                <div className="card-title">Agregar nueva ruta</div>
+                <div className="card-sub">Crea un enlace bidireccional entre dos ciudades. Los valores se sugieren automáticamente.</div>
+              </div>
+            </div>
+            <div className="card-body">
+              <div className="form-grid">
+                <div className="form-row">
+                  <label className="label">Origen</label>
+                  <CiudadSelect ciudades={ciudades} value={o} onChange={setO} />
+                </div>
+                <div className="form-row">
+                  <label className="label">Destino</label>
+                  <CiudadSelect ciudades={ciudades} value={d} onChange={setD} />
+                </div>
+              </div>
+              <div className="form-grid" style={{ marginTop: 6 }}>
+                <div className="form-row">
+                  <label className="label">Costo (USD)</label>
+                  <input className="input" type="number" min={0} value={costo} onChange={e => setCosto(+e.target.value)} />
+                  <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Sugerido: ${sugerido.costoBase}</div>
+                </div>
+                <div className="form-row">
+                  <label className="label">Duración (min)</label>
+                  <input className="input" type="number" min={0} value={duracion} onChange={e => setDuracion(+e.target.value)} />
+                  <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Sugerido: {sugerido.duracionMin} min</div>
+                </div>
+              </div>
+              <div className="form-actions" style={{ marginTop: 12 }}>
+                <button className="btn primary" onClick={agregarRuta}>Agregar ruta</button>
+                <button className="btn ghost" onClick={() => { setO(null); setD(null); setCosto(0); setDuracion(0); }}>Limpiar</button>
+              </div>
+              <div style={{ marginTop: 18, padding: 12, background: 'var(--paper-2)', borderRadius: 6, fontSize: 12, color: 'var(--ink-3)' }}>
+                <strong style={{ color: 'var(--ink-2)' }}>Nota:</strong> La red es no dirigida: se actualiza A[i][j] = A[j][i] = 1 y se recalculan A², A³, C, T y D automáticamente.
+              </div>
             </div>
           </div>
-          <div className="card-body">
-            <div className="form-grid">
-              <div className="form-row">
-                <label className="label">Origen</label>
-                <select className="select" value={o} onChange={e => setO(e.target.value)}>
-                  <option value="">— Selecciona —</option>
-                  {ciudades.map(c => (
-                    <option key={c.id} value={c.id}>{String(c.id + 1).padStart(2, '0')} · {c.nombre}, {c.pais}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="label">Destino</label>
-                <select className="select" value={d} onChange={e => setD(e.target.value)}>
-                  <option value="">— Selecciona —</option>
-                  {ciudades.map(c => (
-                    <option key={c.id} value={c.id}>{String(c.id + 1).padStart(2, '0')} · {c.nombre}, {c.pais}</option>
-                  ))}
-                </select>
+
+          {/* Historial de rutas agregadas */}
+          <div className="card">
+            <div className="card-head">
+              <div>
+                <div className="card-title">
+                  Rutas que agregaste
+                  <span style={{
+                    marginLeft: 10, fontSize: 12, fontWeight: 600,
+                    background: rutasExtra.length > 0 ? 'var(--teal)' : 'var(--paper-3)',
+                    color: rutasExtra.length > 0 ? 'white' : 'var(--ink-3)',
+                    padding: '2px 8px', borderRadius: 10,
+                  }}>{rutasExtra.length}</span>
+                </div>
+                <div className="card-sub">Solo puedes eliminar rutas que tú hayas agregado. Las rutas base de la red son permanentes.</div>
               </div>
             </div>
-            <div className="form-grid" style={{ marginTop: 6 }}>
-              <div className="form-row">
-                <label className="label">Costo (USD)</label>
-                <input className="input" type="number" min={0} value={costo}
-                       onChange={e => setCosto(+e.target.value)} />
-                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Sugerido: ${sugerido.costoBase}</div>
-              </div>
-              <div className="form-row">
-                <label className="label">Duración (min)</label>
-                <input className="input" type="number" min={0} value={duracion}
-                       onChange={e => setDuracion(+e.target.value)} />
-                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Sugerido: {sugerido.duracionMin} min</div>
-              </div>
-            </div>
-            <div className="form-actions" style={{ marginTop: 12 }}>
-              <button className="btn primary" onClick={agregarRuta}>Agregar ruta</button>
-              <button className="btn ghost" onClick={() => { setO(''); setD(''); setCosto(0); setDuracion(0); }}>Limpiar</button>
-            </div>
-            <div style={{ marginTop: 18, padding: 12, background: 'var(--paper-2)', borderRadius: 6, fontSize: 12, color: 'var(--ink-3)' }}>
-              <strong style={{ color: 'var(--ink-2)' }}>Nota:</strong> La matriz A es simétrica (red no dirigida), por lo que se actualiza A[i][j] y A[j][i] = 1, y se recalculan A², A³, C, T y D automáticamente.
+            <div className="card-body">
+              {rutasExtra.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--ink-4)', fontSize: 13 }}>
+                  Aún no has agregado ninguna ruta.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {rutasExtra.map((r, idx) => {
+                    const co = ciudades[r.from];
+                    const cd = ciudades[r.to];
+                    if (!co || !cd) return null;
+                    return (
+                      <div key={idx} style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto',
+                        gap: 12,
+                        alignItems: 'center',
+                        padding: '10px 14px',
+                        background: 'var(--paper-2)',
+                        borderRadius: 6,
+                        borderLeft: '3px solid var(--teal)',
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>
+                            {co.nombre}, {co.pais}
+                            <span style={{ color: 'var(--teal)', margin: '0 8px' }}>↔</span>
+                            {cd.nombre}, {cd.pais}
+                          </div>
+                          <div className="muted" style={{ fontSize: 11, marginTop: 3 }}>
+                            ${r.costoBase} · {fmtMin(r.duracionMin)}
+                          </div>
+                        </div>
+                        <button
+                          className="btn ghost sm"
+                          title="Eliminar esta ruta"
+                          onClick={() => onEliminarRuta(r.from, r.to)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--sky-red)' }}
+                        >
+                          <Trash style={{ width: 14, height: 14 }} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
       ) : (
-        <div className="card">
-          <div className="card-head">
-            <div>
-              <div className="card-title">Agregar nueva ciudad</div>
-              <div className="card-sub">La ciudad nace aislada (grado 0). Luego puedes conectarla con rutas.</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Formulario nueva ciudad */}
+          <div className="card">
+            <div className="card-head">
+              <div>
+                <div className="card-title">Agregar nueva ciudad</div>
+                <div className="card-sub">La ciudad nace aislada (grado 0). Luego puedes conectarla con rutas.</div>
+              </div>
+            </div>
+            <div className="card-body">
+              <div className="form-grid">
+                <div className="form-row">
+                  <label className="label">Nombre de la ciudad</label>
+                  <input className="input" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej. Buenos Aires" />
+                </div>
+                <div className="form-row">
+                  <label className="label">País</label>
+                  <input className="input" value={pais} onChange={e => setPais(e.target.value)} placeholder="Ej. Argentina" />
+                </div>
+                <div className="form-row">
+                  <label className="label">Región</label>
+                  <select className="select" value={region} onChange={e => setRegion(e.target.value as RegionKey)}>
+                    {Object.entries(regiones).map(([k, r]) => (
+                      <option key={k} value={k}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-actions" style={{ marginTop: 12 }}>
+                <button className="btn primary" onClick={agregarCiudad}>Agregar ciudad</button>
+                <button className="btn ghost" onClick={() => { setNombre(''); setPais(''); }}>Limpiar</button>
+              </div>
             </div>
           </div>
-          <div className="card-body">
-            <div className="form-grid">
-              <div className="form-row">
-                <label className="label">Nombre de la ciudad</label>
-                <input className="input" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej. Buenos Aires" />
-              </div>
-              <div className="form-row">
-                <label className="label">País</label>
-                <input className="input" value={pais} onChange={e => setPais(e.target.value)} placeholder="Ej. Argentina" />
-              </div>
-              <div className="form-row">
-                <label className="label">Región</label>
-                <select className="select" value={region} onChange={e => setRegion(e.target.value as RegionKey)}>
-                  {Object.entries(regiones).map(([k, r]) => (
-                    <option key={k} value={k}>{r.label}</option>
-                  ))}
-                </select>
+
+          {/* Historial de ciudades agregadas */}
+          <div className="card">
+            <div className="card-head">
+              <div>
+                <div className="card-title">
+                  Ciudades que agregaste
+                  <span style={{
+                    marginLeft: 10, fontSize: 12, fontWeight: 600,
+                    background: ciudadesExtra.length > 0 ? 'var(--gold)' : 'var(--paper-3)',
+                    color: ciudadesExtra.length > 0 ? 'white' : 'var(--ink-3)',
+                    padding: '2px 8px', borderRadius: 10,
+                  }}>{ciudadesExtra.length}</span>
+                </div>
+                <div className="card-sub">Al eliminar una ciudad se eliminan también todas las rutas que la conectan.</div>
               </div>
             </div>
-            <div className="form-actions" style={{ marginTop: 12 }}>
-              <button className="btn primary" onClick={agregarCiudad}>Agregar ciudad</button>
-              <button className="btn ghost" onClick={() => { setNombre(''); setPais(''); }}>Limpiar</button>
+            <div className="card-body">
+              {ciudadesExtra.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--ink-4)', fontSize: 13 }}>
+                  Aún no has agregado ninguna ciudad.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {ciudadesExtra.map(c => {
+                    const rutasConectadas = rutasExtra.filter(r => r.from === c.id || r.to === c.id).length;
+                    return (
+                      <div key={c.id} style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto',
+                        gap: 12,
+                        alignItems: 'center',
+                        padding: '10px 14px',
+                        background: 'var(--paper-2)',
+                        borderRadius: 6,
+                        borderLeft: '3px solid var(--gold)',
+                      }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+                              background: 'var(--gold)', color: 'white',
+                              padding: '1px 6px', borderRadius: 3,
+                            }}>NUEVA</span>
+                            <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>
+                              {String(c.id + 1).padStart(2, '0')} · {c.nombre}
+                            </span>
+                          </div>
+                          <div className="muted" style={{ fontSize: 11, marginTop: 3 }}>
+                            {c.pais} · {regiones[c.region]?.label ?? c.region}
+                            {rutasConectadas > 0 && (
+                              <span style={{ color: 'var(--sky-red)', marginLeft: 8 }}>
+                                · {rutasConectadas} {rutasConectadas === 1 ? 'ruta conectada' : 'rutas conectadas'} (también se eliminarán)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          className="btn ghost sm"
+                          title="Eliminar esta ciudad y sus rutas"
+                          onClick={() => onEliminarCiudad(c.id, c.nombre)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--sky-red)' }}
+                        >
+                          <Trash style={{ width: 14, height: 14 }} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -208,8 +352,8 @@ function SolicitudesPendientes({ solicitudes, estado, aprobarSolicitud, rechazar
             )}
           </div>
           <div className="card-sub">
-            Cuando un pasajero busca una ruta inexistente, puede solicitarla aquí.
-            Aprueba (✓) ajustando costo y duración, o rechaza (✕) para descartar.
+            Cuando un pasajero busca una ruta inexistente puede solicitarla aquí.
+            Aprueba ajustando costo y duración, o rechaza para descartar.
           </div>
         </div>
       </div>
@@ -284,45 +428,26 @@ function SolicitudRow({ sol, estado, onAprobar, onRechazar }: RowProps) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <label className="label" style={{ fontSize: 10 }}>Costo (USD)</label>
-        <input
-          className="input"
-          type="number"
-          min={0}
-          style={{ width: 90 }}
-          value={costo}
-          onChange={e => setCosto(+e.target.value)}
-        />
+        <input className="input" type="number" min={0} style={{ width: 90 }}
+               value={costo} onChange={e => setCosto(+e.target.value)} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <label className="label" style={{ fontSize: 10 }}>Duración (min)</label>
-        <input
-          className="input"
-          type="number"
-          min={0}
-          style={{ width: 90 }}
-          value={duracion}
-          onChange={e => setDuracion(+e.target.value)}
-        />
+        <input className="input" type="number" min={0} style={{ width: 90 }}
+               value={duracion} onChange={e => setDuracion(+e.target.value)} />
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        <button
-          className="btn primary sm"
-          title="Aprobar y agregar a la red"
-          onClick={() => onAprobar(costo, duracion)}
-          style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-        >
+        <button className="btn primary sm" title="Aprobar y agregar a la red"
+                onClick={() => onAprobar(costo, duracion)}
+                style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <Check style={{ width: 14, height: 14 }} /> Aprobar
         </button>
-        <button
-          className="btn ghost sm"
-          title="Rechazar solicitud"
-          onClick={onRechazar}
-          style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-        >
+        <button className="btn ghost sm" title="Rechazar solicitud"
+                onClick={onRechazar}
+                style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <X style={{ width: 14, height: 14 }} />
         </button>
       </div>
     </div>
   );
 }
-

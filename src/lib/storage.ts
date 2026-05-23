@@ -48,6 +48,11 @@ export function saveReserva(r: ReservaDemo): void {
   localStorage.setItem(KEY_RES, JSON.stringify(list));
 }
 
+export function deleteReserva(codigo: string): void {
+  const list = loadReservas().filter(r => r.codigo !== codigo);
+  localStorage.setItem(KEY_RES, JSON.stringify(list));
+}
+
 export function loadSolicitudes(): SolicitudRuta[] {
   try {
     const raw = localStorage.getItem(KEY_SOL);

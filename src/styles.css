@@ -950,6 +950,7 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 @keyframes toast-in {
   from { transform: translate(-50%, 20px); opacity: 0; }
 }
+.toast.err { background: var(--sky-red); }
 
 /* ---------- Vista grafo ---------- */
 .graph-wrap {

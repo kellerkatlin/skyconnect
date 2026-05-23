@@ -8,8 +8,8 @@ import { Planificador } from './components/Planificador';
 import { VistaCiudades } from './components/VistaCiudades';
 import { VistaStats } from './components/VistaStats';
 import { VistaGrafo } from './components/VistaGrafo';
-import { VistaRedes } from './components/VistaRedes';
 import { VistaAgregar } from './components/VistaAgregar';
+import { VistaReservas } from './components/VistaReservas';
 import { Toast, type ToastInfo } from './components/Toast';
 import { useEstado } from './lib/state';
 import { totalRutasUnicas } from './lib/matrix';
@@ -90,14 +90,14 @@ export default function App() {
               aprobarSolicitud={aprobarSolicitud}
               rechazarSolicitud={rechazarSolicitud}
             />
-          ) : section === 'redes' ? (
-            <VistaRedes estado={estado} />
           ) : section === 'grafo' ? (
             <VistaGrafo estado={estado} />
           ) : section === 'stats' ? (
             <VistaStats estado={estado} />
           ) : section === 'ciudades' ? (
             <VistaCiudades estado={estado} setOrigen={setOrigen} setSection={setSection} />
+          ) : section === 'reservas' ? (
+            <VistaReservas estado={estado} />
           ) : section === 'buscar' ? (
             <BuscadorRuta
               estado={estado}
@@ -114,11 +114,10 @@ export default function App() {
             <Planificador
               estado={estado}
               origen={origen}
-              setOrigen={setOrigen}
               destino={destino}
-              setDestino={setDestino}
               setRutaResaltada={setRutaResaltada}
               setToast={setToast}
+              setSection={setSection}
             />
           ) : (
             <div style={{ padding: 40, color: 'var(--ink-3)' }}>

@@ -22,19 +22,49 @@ export function matrizTiempos(rutas: Ruta[], n: number): Float32Array[] {
 }
 
 export function floydWarshall(W: Float32Array[]): Float32Array[] {
+  return floydWarshallWithNext(W).D;
+}
+
+export function floydWarshallWithNext(W: Float32Array[]): { D: Float32Array[]; next: Int16Array[] } {
   const n = W.length;
   const D = W.map(row => new Float32Array(row));
+  const next = Array.from({ length: n }, () => new Int16Array(n).fill(-1));
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i !== j && W[i][j] < Infinity) next[i][j] = j;
+    }
+  }
+
   for (let k = 0; k < n; k++) {
     for (let i = 0; i < n; i++) {
       const dik = D[i][k];
       if (dik === Infinity) continue;
       for (let j = 0; j < n; j++) {
         const cand = dik + D[k][j];
-        if (cand < D[i][j]) D[i][j] = cand;
+        if (cand < D[i][j]) {
+          D[i][j] = cand;
+          next[i][j] = next[i][k];
+        }
       }
     }
   }
-  return D;
+  return { D, next };
+}
+
+export function reconstruirRuta(next: Int16Array[], i: number, j: number): number[] {
+  if (i === j) return [i];
+  if (next[i][j] < 0) return [];
+  const path: number[] = [i];
+  let cur = i;
+  for (let guard = 0; guard < next.length + 1; guard++) {
+    const nxt = next[cur][j];
+    if (nxt < 0) return [];
+    cur = nxt;
+    path.push(cur);
+    if (cur === j) return path;
+  }
+  return [];
 }
 
 export function dijkstra(W: Float32Array[], origen: number): Float32Array {
@@ -113,9 +143,6 @@ function scoreTiempo(p: PathBase): number {
   const vuelo = p.tramos.reduce((s, t) => s + t.duracionMin, 0);
   return vuelo + Math.max(0, p.tramos.length - 1) * TIEMPO_CONEXION_MIN;
 }
-function scoreBalance(p: PathBase): number {
-  return scoreCosto(p) + (scoreTiempo(p) / 60) * 30;
-}
 
 function toOpcion(p: PathBase, criterios: Criterio[]): OpcionViaje {
   return {
@@ -132,12 +159,14 @@ export type FiltrosBusqueda = {
   maxEscalas?: 0 | 1 | 2;
   presupuestoMax?: number;
   duracionMaxMin?: number;
+  multiplicadorPrecio?: number;
 };
 
 export type ResultadoBusqueda = {
   barata: OpcionViaje | null;
   rapida: OpcionViaje | null;
   balance: OpcionViaje | null;
+  todas: OpcionViaje[];
   total: number;
 };
 
@@ -145,10 +174,11 @@ export function topKRutas(
   rutas: Ruta[], origen: number, destino: number, filtros: FiltrosBusqueda = {}
 ): ResultadoBusqueda {
   const max = filtros.maxEscalas ?? 2;
+  const mult = filtros.multiplicadorPrecio ?? 1;
   let paths = enumerarPaths(rutas, origen, destino, max);
   if (filtros.presupuestoMax != null) paths = paths.filter(p => scoreCosto(p) <= filtros.presupuestoMax!);
   if (filtros.duracionMaxMin != null) paths = paths.filter(p => scoreTiempo(p) <= filtros.duracionMaxMin!);
-  if (paths.length === 0) return { barata: null, rapida: null, balance: null, total: 0 };
+  if (paths.length === 0) return { barata: null, rapida: null, balance: null, todas: [], total: 0 };
 
   const pickBy = (scoreFn: (p: PathBase) => number) => {
     let best = paths[0], bestScore = scoreFn(best);
@@ -159,23 +189,41 @@ export function topKRutas(
     return best;
   };
 
+  // Balance pondera costo con el multiplicador real de clase para que
+  // en Business se prefieran rutas más rápidas frente a las más baratas.
+  const scoreBalanceMult = (p: PathBase) =>
+    scoreCosto(p) * mult + (scoreTiempo(p) / 60) * 30;
+
   const pBarata = pickBy(scoreCosto);
   const pRapida = pickBy(scoreTiempo);
-  const pBalance = pickBy(scoreBalance);
+  const pBalance = pickBy(scoreBalanceMult);
 
-  // Detectar duplicados para badges combinados
   const key = (p: PathBase) => p.path.join('-');
   const kB = key(pBarata), kR = key(pRapida), kBal = key(pBalance);
+
+  // Construir lista completa ordenada por costo con badges asignados
+  const todas: OpcionViaje[] = [...paths]
+    .sort((a, b) => scoreCosto(a) - scoreCosto(b))
+    .map(p => {
+      const k = key(p);
+      const criterios: Criterio[] = [];
+      if (k === kB) criterios.push('barata');
+      if (k === kR) criterios.push('rapida');
+      if (k === kBal) criterios.push('balance');
+      return toOpcion(p, criterios);
+    });
+
+  // Mantener campos legacy barata/rapida/balance para compatibilidad
   const tagBarata: Criterio[] = ['barata'];
   if (kBal === kB) tagBarata.push('balance');
   const tagRapida: Criterio[] = ['rapida'];
   if (kBal === kR) tagRapida.push('balance');
-  const tagBalance: Criterio[] = ['balance'];
 
   return {
     barata: toOpcion(pBarata, tagBarata),
     rapida: kR === kB ? null : toOpcion(pRapida, tagRapida),
-    balance: (kBal === kB || kBal === kR) ? null : toOpcion(pBalance, tagBalance),
+    balance: (kBal === kB || kBal === kR) ? null : toOpcion(pBalance, ['balance']),
+    todas,
     total: paths.length,
   };
 }

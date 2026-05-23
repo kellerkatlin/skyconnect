@@ -15,8 +15,9 @@ type Props = {
 type DragState = { x: number; y: number; panX: number; panY: number } | null;
 
 export function MapaRutas({ estado, ciudadSel, setCiudadSel, rutaResaltada }: Props) {
-  const { ciudades } = estado;
+  const { ciudades, ciudadesExtra } = estado;
   const { A } = estado;
+  const extraIds = useMemo(() => new Set(ciudadesExtra.map(c => c.id)), [ciudadesExtra]);
 
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -50,14 +51,17 @@ export function MapaRutas({ estado, ciudadSel, setCiudadSel, rutaResaltada }: Pr
 
   // Rutas a dibujar
   const rutas = useMemo(() => {
-    const list: [number, number][] = [];
+    const list: { i: number; j: number; nueva: boolean }[] = [];
     for (let i = 0; i < ciudades.length; i++) {
       for (let j = i + 1; j < ciudades.length; j++) {
-        if (A[i][j] === 1) list.push([i, j]);
+        if (A[i][j] === 1) {
+          const nueva = extraIds.has(ciudades[i].id) || extraIds.has(ciudades[j].id);
+          list.push({ i, j, nueva });
+        }
       }
     }
     return list;
-  }, [A, ciudades]);
+  }, [A, ciudades, extraIds]);
 
   // Pan / zoom
   const onMouseDown = (e: ReactMouseEvent<SVGSVGElement>) => {
@@ -149,7 +153,7 @@ export function MapaRutas({ estado, ciudadSel, setCiudadSel, rutaResaltada }: Pr
 
         {/* Rutas */}
         <g>
-          {rutas.map(([i, j]) => {
+          {rutas.map(({ i, j, nueva }) => {
             const c1 = ciudades[i];
             const c2 = ciudades[j];
             const key = `${i}-${j}`;
@@ -168,6 +172,7 @@ export function MapaRutas({ estado, ciudadSel, setCiudadSel, rutaResaltada }: Pr
                   (hl && !inPath ? ' highlighted' : '') +
                   (dim ? ' dim' : '')
                 }
+                style={nueva && !inPath && !dim ? { stroke: 'var(--gold)', strokeWidth: 1.5, opacity: 0.7 } : undefined}
               />
             );
           })}
@@ -178,7 +183,8 @@ export function MapaRutas({ estado, ciudadSel, setCiudadSel, rutaResaltada }: Pr
           {ciudades.map((c, i) => {
             const hub = isHub(i);
             const sel = ciudadSel === i;
-            const r = sel ? 5.5 : hub ? 4.5 : 2.6;
+            const esNueva = extraIds.has(c.id);
+            const r = sel ? 5.5 : esNueva ? 5 : hub ? 4.5 : 2.6;
             return (
               <g
                 key={c.id}
@@ -187,15 +193,21 @@ export function MapaRutas({ estado, ciudadSel, setCiudadSel, rutaResaltada }: Pr
                 onClick={(e) => { e.stopPropagation(); setCiudadSel(sel ? null : i); }}
                 style={{ cursor: 'pointer' }}
               >
+                {esNueva && (
+                  <circle cx={c.x} cy={c.y} r={r + 3}
+                    fill="none" stroke="var(--gold)" strokeWidth={1} opacity={0.4} />
+                )}
                 <circle
                   cx={c.x} cy={c.y} r={r}
                   className={'city-dot' + (hub ? ' hub' : '') + (sel ? ' selected' : '')}
+                  style={esNueva ? { fill: 'var(--gold)', stroke: 'var(--gold)' } : undefined}
                 />
-                {(hub || sel || hover === i) && (
+                {(hub || sel || hover === i || esNueva) && (
                   <text
-                    x={c.x + (hub ? 7 : 5)}
+                    x={c.x + (hub || esNueva ? 7 : 5)}
                     y={c.y + 2}
                     className={'city-label' + (hub ? ' hub-label' : '')}
+                    style={esNueva ? { fill: 'var(--gold)', fontWeight: 600 } : undefined}
                   >
                     {c.nombre}
                   </text>

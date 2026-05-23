@@ -3,7 +3,7 @@ import type { Ciudad, Regiones, Ruta } from './types';
 import { ciudadesSeed, regionesSeed } from '../data/cities';
 import { rutasSeed } from '../data/routes';
 import { construirMatrizDesdeRutas, productoBooleano } from './matrix';
-import { matrizCostos, matrizTiempos, floydWarshall } from './pathfinding';
+import { matrizCostos, matrizTiempos, floydWarshallWithNext } from './pathfinding';
 import { loadUserData, saveUserData } from './storage';
 import { generarCostoYTiempo } from './pricing';
 
@@ -24,9 +24,10 @@ export function useEstado() {
     const A3 = productoBooleano(A2, A);
     const C = matrizCostos(rutas, n);
     const T = matrizTiempos(rutas, n);
-    const D = floydWarshall(C);
+    const { D, next } = floydWarshallWithNext(C);
 
-    return { ciudades, regiones, rutas, A, A2, A3, C, T, D };
+    return { ciudades, regiones, rutas, A, A2, A3, C, T, D, next,
+             ciudadesExtra: ud.ciudadesExtra, rutasExtra: ud.rutasExtra };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
 
@@ -63,5 +64,22 @@ export function useEstado() {
     return true;
   }, []);
 
-  return { ...data, recargar, agregarCiudad, agregarRuta };
+  const eliminarCiudad = useCallback((id: number) => {
+    const ud = loadUserData();
+    ud.ciudadesExtra = ud.ciudadesExtra.filter(c => c.id !== id);
+    ud.rutasExtra = ud.rutasExtra.filter(r => r.from !== id && r.to !== id);
+    saveUserData(ud);
+    setVersion(v => v + 1);
+  }, []);
+
+  const eliminarRuta = useCallback((from: number, to: number) => {
+    const ud = loadUserData();
+    ud.rutasExtra = ud.rutasExtra.filter(
+      r => !((r.from === from && r.to === to) || (r.from === to && r.to === from))
+    );
+    saveUserData(ud);
+    setVersion(v => v + 1);
+  }, []);
+
+  return { ...data, recargar, agregarCiudad, agregarRuta, eliminarCiudad, eliminarRuta };
 }

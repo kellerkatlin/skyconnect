@@ -44,6 +44,12 @@ export const Reset = makeIcon(
 );
 export const Check = makeIcon(<path d="M5 12l5 5L20 7"/>);
 export const X = makeIcon(<><path d="M6 6l12 12M18 6L6 18"/></>);
+export const Trash = makeIcon(
+  <><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></>
+);
+export const Ticket = makeIcon(
+  <><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M15 7v10M12 10h.01M12 14h.01"/></>
+);
 export const Compass = makeIcon(
   <><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5L13 13l-4.5 2.5L11 11l4.5-2.5z" fill="currentColor" stroke="none"/></>
 );
