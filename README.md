@@ -84,7 +84,7 @@ La barra lateral organiza el sistema en tres bloques: **Red**, **Análisis** y *
 ## 📁 Estructura del proyecto
 
 ```
-skyconnect-app/
+skyconnect/
 │
 ├── 🐳 Dockerfile               Multi-stage Node 20 → Nginx 1.27 (imagen ~25 MB)
 ├── 🌐 nginx.conf               Config de Nginx: SPA fallback + cache de assets
