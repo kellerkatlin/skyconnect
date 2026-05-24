@@ -1,9 +1,16 @@
+import { useMemo } from 'react';
 import type { useEstado } from '../lib/state';
 import type { Ciudad, SolicitudRuta } from '../lib/types';
 import { ArrowRight } from './Icons';
 import { CiudadSelect } from './CiudadSelect';
 import { hallar1Escala, hallar2Escalas } from '../lib/matrix';
+import { dijkstraConRuta } from '../lib/pathfinding';
 import type { SectionId } from './Sidebar';
+
+function fmtMin(min: number): string {
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h}h ${m}min` : `${h}h`;
+}
 
 type Estado = ReturnType<typeof useEstado>;
 
@@ -23,7 +30,12 @@ export function BuscadorPorEscalas({
   estado, origen, setOrigen, destino, setDestino, setRutaResaltada,
   solicitudes, pedirRuta, setSection,
 }: Props) {
-  const { ciudades, A, A2, A3 } = estado;
+  const { ciudades, A, A2, A3, T } = estado;
+
+  const dijkstraResult = useMemo(() => {
+    if (origen == null || destino == null || origen === destino) return null;
+    return dijkstraConRuta(T, origen, destino);
+  }, [T, origen, destino]);
 
   // Resultados
   const directo = origen != null && destino != null && origen !== destino && A[origen][destino] === 1;
@@ -284,6 +296,51 @@ export function BuscadorPorEscalas({
                 )}
               </div>
             </div>
+
+            {/* Ruta más rápida — Dijkstra sobre T */}
+            {dijkstraResult && dijkstraResult.path.length > 0 && (
+              <div className="result-section" style={{ marginTop: 12 }}>
+                <div className="result-section-head">
+                  <div className="step found" style={{ background: 'var(--teal)' }}>⚡</div>
+                  <div>
+                    <div className="step-title">Ruta más rápida · Dijkstra</div>
+                    <div className="card-sub">
+                      Camino de menor tiempo total sobre la matriz T —{' '}
+                      {dijkstraResult.path.length - 1 === 0
+                        ? 'vuelo directo'
+                        : `${dijkstraResult.path.length - 2} ${dijkstraResult.path.length - 2 === 1 ? 'escala' : 'escalas'}`}
+                      {' · '}<strong>{fmtMin(dijkstraResult.tiempoMin)}</strong>
+                    </div>
+                  </div>
+                  <div className="step-formula" style={{ color: 'var(--teal)' }}>
+                    T* = {Math.round(dijkstraResult.tiempoMin)} min
+                  </div>
+                </div>
+                <div className="result-section-body">
+                  <div className="path">
+                    {dijkstraResult.path.map((id, idx) => (
+                      <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {idx > 0 && <ArrowRight className="path-arrow" style={{ width: 13, height: 13 }} />}
+                        <div className="path-stop">
+                          <div>{ciudades[id].nombre}</div>
+                          <div className="code" style={
+                            idx === 0 || idx === dijkstraResult.path.length - 1
+                              ? { color: 'var(--teal)' }
+                              : undefined
+                          }>
+                            {idx === 0 ? 'ORIGEN' : idx === dijkstraResult.path.length - 1 ? 'DESTINO' : 'ESCALA'}
+                          </div>
+                        </div>
+                      </span>
+                    ))}
+                    <button className="btn ghost sm" style={{ marginLeft: 'auto' }}
+                      onClick={() => destacar(dijkstraResult.path)}>
+                      Ver en mapa
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* CTA: planificar viaje si hay rutas */}
             {(directo || escalas1.length > 0 || escalas2.length > 0) && setSection && (

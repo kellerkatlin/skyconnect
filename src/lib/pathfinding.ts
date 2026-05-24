@@ -67,9 +67,12 @@ export function reconstruirRuta(next: Int16Array[], i: number, j: number): numbe
   return [];
 }
 
-export function dijkstra(W: Float32Array[], origen: number): Float32Array {
+export function dijkstraConRuta(
+  W: Float32Array[], origen: number, destino: number
+): { tiempoMin: number; path: number[] } {
   const n = W.length;
   const dist = new Float32Array(n).fill(Infinity);
+  const prev = new Int16Array(n).fill(-1);
   const visit = new Uint8Array(n);
   dist[origen] = 0;
   for (let iter = 0; iter < n; iter++) {
@@ -77,15 +80,20 @@ export function dijkstra(W: Float32Array[], origen: number): Float32Array {
     for (let i = 0; i < n; i++) {
       if (!visit[i] && dist[i] < best) { best = dist[i]; u = i; }
     }
-    if (u === -1) break;
+    if (u === -1 || u === destino) break;
     visit[u] = 1;
     const row = W[u];
     for (let v = 0; v < n; v++) {
+      if (row[v] === Infinity) continue;
       const cand = dist[u] + row[v];
-      if (cand < dist[v]) dist[v] = cand;
+      if (cand < dist[v]) { dist[v] = cand; prev[v] = u; }
     }
   }
-  return dist;
+  if (dist[destino] === Infinity) return { tiempoMin: Infinity, path: [] };
+  const path: number[] = [];
+  let cur: number = destino;
+  while (cur !== -1) { path.unshift(cur); cur = prev[cur]; }
+  return { tiempoMin: dist[destino], path };
 }
 
 // Adjacency list (id → vecinos con tramo) construida una vez para enumeración
