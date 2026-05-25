@@ -99,7 +99,7 @@ export function MatrizInteractiva({ estado }: Props) {
     A3: { titulo: 'Potencia booleana A³ · caminos de 3 tramos', cuerpo: 'A³ = A² ∘ A. La celda [i, j] vale 1 si existe alguna ruta de i a j con hasta 2 escalas. Cuanto más densa, más conectada está la red.' },
     C:  { titulo: 'Matriz de costos C', cuerpo: 'Cada celda [i, j] muestra la tarifa en dólares del vuelo directo i → j (∞ si no hay vuelo directo). El mapa de calor identifica visualmente los tramos caros y baratos.' },
     T:  { titulo: 'Matriz de tiempos T', cuerpo: 'Cada celda [i, j] indica la duración en minutos del vuelo directo i → j. Es la base para calcular la ruta más rápida mediante Dijkstra.' },
-    D:  { titulo: 'Matriz de costos óptimos D', cuerpo: 'D[i, j] es el costo MÍNIMO para ir de i a j usando cualquier número de escalas y combinaciones de rutas.' },
+    D:  { titulo: 'Matriz de costos óptimos D', cuerpo: 'D[i, j] es el costo MÍNIMO para ir de i a j usando cualquier número de escalas y combinaciones de rutas. Calculada con el algoritmo Floyd-Warshall, que evalúa todos los pares de ciudades considerando cada ciudad posible como escala intermedia.' },
   };
 
   const fillNumerico = tipo === 'D' ? 'var(--sky-red)'
