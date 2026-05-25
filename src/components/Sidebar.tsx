@@ -54,9 +54,13 @@ export function Sidebar({ section, setSection, n, totalRutas }: Props) {
       ))}
 
       <div className="sidebar-foot">
-        <strong>Matemática Discreta · 1AMA0708</strong>
-        UPC · Grupo 1 · 2026<br />
-        {n} ciudades · {totalRutas} rutas
+        <div>
+          <strong>Matemática Discreta</strong>
+          1AMA0708<br />
+          UPC · Grupo 1 · 2026<br />
+          {n} ciudades · {totalRutas} rutas
+        </div>
+        <img src="/upc-logo.png" alt="UPC" style={{ width: 64, height: 64, objectFit: 'contain', flexShrink: 0, marginRight: 8 }} />
       </div>
     </aside>
   );
